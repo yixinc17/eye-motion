@@ -212,15 +212,15 @@ function draw() {
   const cy = config.canvasHeight / 2;
   const headOffset = pipeline.headYaw * 4;
 
-  // 1. 头部 + 眼睛（整体随 headYaw 水平偏移）
+  // 1. 身体：圆柱形（圆角矩形）
+  drawBody(cx, cy, headOffset);
+
+  // 2. 头部 + 眼睛（整体随 headYaw 水平偏移）
   push();
   translate(cx + headOffset, cy);
   drawFace();
   drawEyes();
   pop();
-
-  // 2. 身体：圆柱形（圆角矩形），后画以露出在脸部下方
-  drawBody(cx, cy, headOffset);
 
   const el = document.getElementById('status-bar');
   if (el) {
@@ -245,7 +245,7 @@ function drawBody(centerX, centerY, headOffset) {
   push();
   translate(centerX + headOffset * 0.5, bodyY);
   noStroke();
-  fill(255, 207, 238);  // #FFCFEE
+  fill(180, 170, 160);  // 灰褐色圆柱
   rectMode(CENTER);
   rect(0, 0, bodyW, bodyH, 20);
   fill(80);
@@ -255,10 +255,10 @@ function drawBody(centerX, centerY, headOffset) {
   pop();
 }
 
-// 脸部椭圆（肉色 = 头部/脸）
+// 脸部椭圆（头部/脸）
 function drawFace() {
   noStroke();
-  fill(255, 235, 220);
+  fill(255, 207, 238);  // #FFCFEE
   ellipse(0, 0, 560, 400);
   fill(100);
   textSize(12);
