@@ -53,7 +53,7 @@
 |------|-----|-----|----------|
 | ① 眼先动 | 到极限 ±eyeMax | 不动 | 进入头区，延迟计时未满 |
 | ② 延迟 | 保持极限 | 不动 | 计时 < T_delay |
-| ③ 头转 | 保持极限 | 向目标角度转动 | 计时 ≥ T_delay，且 \|effective_nx\| ≥ E_exit |
+| ③ 头转 | 保持极限 | 向目标角度转动（目标：人脸居中，headYaw = nx × headMaxDeg） | 计时 ≥ T_delay，且 \|effective_nx\| ≥ E_exit |
 | ④ 眼归位 | 按旋转后坐标移动 | 继续向目标转动 | \|effective_nx\| < E_exit，头已到位 |
 
 ### 3.2 旋转后坐标（effective）

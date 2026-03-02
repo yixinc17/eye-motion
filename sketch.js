@@ -11,7 +11,7 @@ let params = {
   eyeGain: 1.0,
   alpha_eye: 0.18,
   headMaxDeg: 30,
-  headGain: 0.7,
+  headGain: 1.0,  // 1.0=头转到人脸居中；<1 则只转部分角度
   alpha_head: 0.03,  // 头旋转平滑系数，越小越慢（定位：第 160 行 headYaw 更新）
   E_exit: 0.25,
   lost_frames: 10
@@ -132,6 +132,8 @@ function updatePipeline() {
     // deltaTime = 上一帧到本帧的间隔(ms)，60fps 时约 16.67
     p.head_delay_timer += (typeof deltaTime !== 'undefined' ? deltaTime : 16.67);
     const headReady = p.head_delay_timer >= pr.head_delay_ms;
+    // 头目标：旋转到人脸处于视野中心为止（effective_nx=0 => headYaw = nx_s * headMaxDeg）
+    // headGain=1 时完全居中；<1 时只转部分角度
     const headTargetValue = Math.max(-pr.headMaxDeg, Math.min(pr.headMaxDeg, p.nx_s * pr.headGain * pr.headMaxDeg));
     p.headTarget = headReady ? headTargetValue : p.headYaw;  // 延迟期间保持当前头角度
     // 模拟：头转动后，重新检测人脸在旋转后坐标系中的位置
