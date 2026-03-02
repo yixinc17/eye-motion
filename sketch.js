@@ -258,7 +258,7 @@ function drawBody(centerX, centerY, headOffset) {
 // 脸部椭圆（头部/脸）
 function drawFace() {
   noStroke();
-  fill(255, 207, 238);  // #FFCFEE
+  fill('#FFCFEE');
   ellipse(0, 0, 560, 400);
   fill(100);
   textSize(12);
