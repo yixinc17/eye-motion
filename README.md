@@ -3,15 +3,7 @@
 人脸跟随原型，用于验证眼+头协同的**自然感**。
 
 ## 运行
-
-```bash
-# 方式 1：直接打开（部分浏览器可能限制）
-open index.html
-
-# 方式 2：本地服务器（推荐）
-npx serve .
-# 或
-python3 -m http.server 8080
+(https://yixinc17.github.io/eye-motion/)
 ```
 
 ## 交互
