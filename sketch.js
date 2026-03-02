@@ -245,7 +245,7 @@ function drawBody(centerX, centerY, headOffset) {
   push();
   translate(centerX + headOffset * 0.5, bodyY);
   noStroke();
-  fill(180, 170, 160);  // 灰褐色圆柱
+  fill(255, 207, 238);  // #FFCFEE
   rectMode(CENTER);
   rect(0, 0, bodyW, bodyH, 20);
   fill(80);
