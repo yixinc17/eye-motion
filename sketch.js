@@ -212,15 +212,15 @@ function draw() {
   const cy = config.canvasHeight / 2;
   const headOffset = pipeline.headYaw * 4;
 
-  // 1. 身体：圆柱形（圆角矩形）
-  drawBody(cx, cy, headOffset);
-
-  // 2. 头部 + 眼睛（整体随 headYaw 水平偏移）
+  // 1. 头部 + 眼睛（整体随 headYaw 水平偏移）
   push();
   translate(cx + headOffset, cy);
   drawFace();
   drawEyes();
   pop();
+
+  // 2. 身体：圆柱形（圆角矩形），后画以露出在脸部下方
+  drawBody(cx, cy, headOffset);
 
   const el = document.getElementById('status-bar');
   if (el) {
