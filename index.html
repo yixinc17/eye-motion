@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Motion Eye - 眼+头协同跟随 Prototype</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      display: flex;
+      min-height: 100vh;
+      background: #1a1a2e;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    /* 左侧：鼠标交互 + 显示，左右排列 */
+    .content-area {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      gap: 24px;
+    }
+    .input-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .input-section label {
+      color: #888;
+      font-size: 12px;
+    }
+    /* 4:3 输入框 */
+    #input-box {
+      width: 320px;
+      height: 240px;
+      background: #2a2a3e;
+      border: 2px solid #4a4a6a;
+      border-radius: 12px;
+      cursor: crosshair;
+      position: relative;
+      overflow: hidden;
+    }
+    #input-box::after {
+      content: '鼠标在此移动 = 人脸中心';
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #666;
+      font-size: 11px;
+      pointer-events: none;
+    }
+    /* 输入框分区标注：2D 布局，死区为中心小方块 */
+    .zone-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+    }
+    .zone-strip {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 600;
+      opacity: 0.25;
+      border-left: 1px solid rgba(255,255,255,0.3);
+    }
+    .zone-strip:first-child { border-left: none; }
+    .zone-center {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 600;
+      opacity: 0.35;
+    }
+    .zone-dead { background: #4a4a6a; color: #fff; }
+    .zone-eye { background: #3a5a7a; color: #aad; }
+    .zone-head { background: #5a3a4a; color: #daa; }
+    #input-dot {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background: #4ecdc4;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      box-shadow: 0 0 8px rgba(78, 205, 196, 0.6);
+    }
+    /* 显示画布 */
+    .display-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .display-section label {
+      color: #888;
+      font-size: 12px;
+    }
+    #canvas-container {
+      width: 720px;
+      height: 400px;
+      background: #3a3a4e;
+      border: 2px solid #4a4a6a;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #canvas-container canvas {
+      display: block;
+      width: 720px !important;
+      height: 400px !important;
+    }
+    /* 参数面板 - 最右边 */
+    .param-panel {
+      width: 280px;
+      min-width: 280px;
+      background: #252535;
+      padding: 20px;
+      overflow-y: auto;
+      border-left: 1px solid #333;
+    }
+    .panel-title {
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #333;
+    }
+    .param-group {
+      margin-bottom: 16px;
+    }
+    .param-group h4 {
+      color: #888;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+    .param-item {
+      margin-bottom: 10px;
+    }
+    .param-item label {
+      display: flex;
+      justify-content: space-between;
+      color: #ccc;
+      font-size: 11px;
+      margin-bottom: 4px;
+    }
+    .param-item label span {
+      color: #4ecdc4;
+      font-family: monospace;
+    }
+    .param-item input[type="range"] {
+      width: 100%;
+      height: 5px;
+      -webkit-appearance: none;
+      background: #333;
+      border-radius: 3px;
+      outline: none;
+    }
+    .param-item input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: #4ecdc4;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    .status-bar {
+      margin-top: 12px;
+      padding: 8px 12px;
+      background: #0d0d14;
+      border-radius: 6px;
+      font-size: 10px;
+      color: #888;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <h1 style="position:absolute;top:12px;left:24px;color:#888;font-size:14px;">Motion Eye Prototype</h1>
+  <div class="content-area">
+    <!-- 左：鼠标交互 -->
+    <div class="input-section">
+      <label>输入框 · nx = (cx - W/2) / (W/2)</label>
+      <div id="input-box">
+        <div id="input-dot" style="left: 50%; top: 50%;"></div>
+        <!-- 分区：死区 |nx|,|ny|<0.12 中心小方块；眼区 0.12~0.75；头区 |nx|≥0.75 -->
+        <div class="zone-overlay" id="zone-overlay">
+          <div class="zone-strip zone-head" style="left:0;width:12.5%;" title="头区 |nx|≥0.75">头</div>
+          <div class="zone-strip zone-eye" style="left:12.5%;width:31.5%;" title="眼区 0.12~0.75">眼</div>
+          <div class="zone-strip zone-eye" style="left:44%;width:12%;"></div>
+          <div class="zone-strip zone-eye" style="left:56%;width:31.5%;">眼</div>
+          <div class="zone-strip zone-head" style="left:87.5%;width:12.5%;" title="头区 |nx|≥0.75">头</div>
+          <div class="zone-center zone-dead" style="left:44%;top:44%;width:12%;height:12%;" title="死区 |nx|,|ny|<0.12">死</div>
+        </div>
+      </div>
+    </div>
+    <!-- 右：显示 -->
+    <div class="display-section">
+      <label>显示</label>
+      <div id="canvas-container"></div>
+      <div id="display-data" style="margin-top:8px;font-size:11px;color:#888;font-family:monospace;">
+        协同: — &nbsp;|&nbsp; eyeX: — px &nbsp;|&nbsp; eyeY: — px &nbsp;|&nbsp; headYaw: — °
+      </div>
+      <div style="margin-top:4px;font-size:10px;color:#666;">①眼先动 → 延迟 → ②头转 → ③眼归位</div>
+    </div>
+  </div>
+  
+  <div class="param-panel">
+    <div class="panel-title">🎛️ 可调参数</div>
+    
+    <div class="param-group">
+      <h4>输入稳定</h4>
+      <div class="param-item">
+        <label>eps (去抖) <span id="val-eps">0.02</span></label>
+        <input type="range" id="param-eps" min="0" max="0.1" step="0.01" value="0.02">
+      </div>
+      <div class="param-item">
+        <label>alpha_in (输入平滑) <span id="val-alpha-in">0.2</span></label>
+        <input type="range" id="param-alpha-in" min="0.05" max="0.5" step="0.05" value="0.2">
+      </div>
+    </div>
+    
+    <div class="param-group">
+      <h4>眼睛</h4>
+      <div class="param-item">
+        <label>eyeMaxPx <span id="val-eyeMaxPx">30</span></label>
+        <input type="range" id="param-eyeMaxPx" min="10" max="50" step="1" value="30">
+      </div>
+      <div class="param-item">
+        <label>eyeGain <span id="val-eyeGain">1.0</span></label>
+        <input type="range" id="param-eyeGain" min="0.5" max="1.5" step="0.1" value="1.0">
+      </div>
+      <div class="param-item">
+        <label>alpha_eye (输出平滑) <span id="val-alpha-eye">0.18</span></label>
+        <input type="range" id="param-alpha-eye" min="0.05" max="0.4" step="0.01" value="0.18">
+      </div>
+    </div>
+    
+    <div class="param-group">
+      <h4>头部</h4>
+      <div class="param-item">
+        <label>headMaxDeg <span id="val-headMaxDeg">30</span></label>
+        <input type="range" id="param-headMaxDeg" min="15" max="45" step="1" value="30">
+      </div>
+      <div class="param-item">
+        <label>headGain <span id="val-headGain">0.7</span></label>
+        <input type="range" id="param-headGain" min="0.3" max="1.2" step="0.1" value="0.7">
+      </div>
+      <div class="param-item">
+        <label>alpha_head (头旋转速度) <span id="val-alpha-head">0.03</span></label>
+        <input type="range" id="param-alpha-head" min="0.01" max="0.12" step="0.01" value="0.03">
+      </div>
+    </div>
+    
+    <div class="param-group">
+      <h4>分区</h4>
+      <div class="param-item">
+        <label>zone_head_min (头区起始) <span id="val-zone-head-min">0.75</span></label>
+        <input type="range" id="param-zone-head-min" min="0.5" max="0.95" step="0.05" value="0.75">
+      </div>
+    </div>
+    <div class="param-group">
+      <h4>协同</h4>
+      <div class="param-item">
+        <label>head_delay_ms (眼→头延迟) <span id="val-head-delay-ms">1000</span></label>
+        <input type="range" id="param-head-delay-ms" min="0" max="2000" step="100" value="1000">
+      </div>
+      <div class="param-item">
+        <label>E_exit (眼归位阈值) <span id="val-E-exit">0.25</span></label>
+        <input type="range" id="param-E-exit" min="0.1" max="0.4" step="0.05" value="0.25">
+      </div>
+      <div class="param-item">
+        <label>lost_frames <span id="val-lost-frames">10</span></label>
+        <input type="range" id="param-lost-frames" min="5" max="30" step="1" value="10">
+      </div>
+    </div>
+    
+    <div class="status-bar" id="status-bar">
+      zone: — | nx_s: — | eyeX: — | headYaw: —
+    </div>
+  </div>
+  
+  <script>
+    // 输入框逻辑：独立于 p5，确保鼠标交互可用
+    window.faceInput = { cx: 160, cy: 120, active: false };
+    document.addEventListener('DOMContentLoaded', function() {
+      const box = document.getElementById('input-box');
+      const dot = document.getElementById('input-dot');
+      if (!box || !dot) return;
+      box.addEventListener('mousemove', function(e) {
+        const rect = box.getBoundingClientRect();
+        const x = Math.max(0, Math.min(320, e.clientX - rect.left));
+        const y = Math.max(0, Math.min(240, e.clientY - rect.top));
+        window.faceInput.cx = x;
+        window.faceInput.cy = y;
+        window.faceInput.active = true;
+        dot.style.left = x + 'px';
+        dot.style.top = y + 'px';
+      });
+      box.addEventListener('mouseleave', function() { window.faceInput.active = false; });
+      box.addEventListener('mouseenter', function() { window.faceInput.active = true; });
+    });
+  </script>
+  <script src="sketch.js"></script>
+  <script>
+    // 参数滑块同步
+    const paramMap = {
+      'eps':'eps','alpha-in':'alpha_in','zone-head-min':'zone_head_min',
+      'head-delay-ms':'head_delay_ms',
+      'eyeMaxPx':'eyeMaxPx','eyeGain':'eyeGain','alpha-eye':'alpha_eye',
+      'headMaxDeg':'headMaxDeg','headGain':'headGain','alpha-head':'alpha_head',
+      'E-exit':'E_exit','lost-frames':'lost_frames'
+    };
+    Object.keys(paramMap).forEach(name => {
+      const el = document.getElementById('param-' + name);
+      const valEl = document.getElementById('val-' + name);
+      const key = paramMap[name];
+      if (!el) return;
+      el.addEventListener('input', () => {
+        const v = parseFloat(el.value);
+        if (valEl) valEl.textContent = v;
+        if (window.setParam) window.setParam(key, v);
+      });
+    });
+  </script>
+</body>
+</html>
